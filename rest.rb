@@ -1,0 +1,140 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+require 'fileutils'
+require 'optparse'
+
+def get_brightness
+  `brightness -l`.split.last.to_f
+end
+
+def set_brightness(value)
+  system("brightness #{value}")
+end
+
+def dim_screen(dim_duration, brightness)
+  step = 0.05
+  ((get_brightness - brightness) / step).floor.to_i.times do
+    set_brightness(get_brightness - step)
+    sleep 0.001
+  end
+  set_brightness(brightness)
+
+  sleep(dim_duration)
+
+  ((1.0 - get_brightness) / step).floor.to_i.times do
+    set_brightness(get_brightness + step)
+    sleep 0.001
+  end
+  set_brightness(1.0)
+end
+
+def parse_time(str)
+  if str[-1, 1] == 'm'
+    str[0..-2].to_i * 60
+  else
+    str.to_i
+  end
+end
+
+def start(options)
+  dim_duration = options[:dim_duration] || 10
+  sleep_duration = options[:sleep_duration] || 3600
+  brightness = options[:brightness] || 0.5
+  run_in_background = options[:run_in_background] || false
+
+  if run_in_background
+    pid = fork do
+      run_dimmer(dim_duration, sleep_duration, brightness)
+    end
+
+    if pid
+      Process.detach(pid)
+      File.write('/tmp/rest.pid', pid)
+      puts "Dim screen script started in the background with pid #{pid}"
+    else
+      puts 'Failed to start dim screen script in the background'
+    end
+  else
+    run_dimmer(dim_duration, sleep_duration, brightness)
+  end
+end
+
+def run_dimmer(dim_duration, sleep_duration, brightness)
+  Signal.trap('TERM') do
+    FileUtils.rm_f('/tmp/rest.pid')
+    exit
+  end
+
+  loop do
+    dim_screen(dim_duration, brightness)
+    sleep(sleep_duration)
+  end
+end
+
+def stop
+  if File.exist?('/tmp/rest.pid')
+    pid = File.read('/tmp/rest.pid').to_i
+    Process.kill('TERM', pid)
+    FileUtils.rm_f('/tmp/rest.pid')
+    puts 'Dim screen script stopped.'
+  else
+    puts 'Dim screen script is not running.'
+  end
+end
+
+options = {}
+
+option_parser = OptionParser.new do |opts|
+  opts.banner = 'Usage: rest.rb command [options]'
+
+  opts.on('-dDIM', '--dim=DIM', 'Set dimming duration') do |d|
+    d = parse_time(d)
+    if d <= 0 || d > 300
+      puts 'Dim duration must be a positive integer not exceeding 300 (5 minutes)'
+      exit
+    end
+    options[:dim_duration] = d
+  end
+
+  opts.on('-sSLEEP', '--sleep=SLEEP', 'Set sleep duration') do |s|
+    s = parse_time(s)
+    if s <= 0
+      puts 'Sleep duration must be a positive integer'
+      exit
+    end
+    options[:sleep_duration] = s
+  end
+
+  opts.on('-bBRIGHTNESS', '--brightness=BRIGHTNESS', 'Set dimming brightness') do |b|
+    b = b.to_f
+    if b < 0.0 || b > 1.0
+      puts 'Brightness must be a float between 0.0 and 1.0'
+      exit
+    end
+    options[:brightness] = b
+  end
+
+  opts.on('-r', '--run-in-background', 'Run in background') do
+    options[:run_in_background] = true
+  end
+
+  opts.on('-h', '--help', 'Displays Help') do
+    puts opts
+    exit
+  end
+end
+
+option_parser.order!
+command = ARGV.shift
+option_parser.order!
+
+case command
+when 'run'
+  start(options)
+when 'stop'
+  stop
+else
+  puts "Invalid command. Please use 'run' to start the script and 'stop' to stop it."
+  puts option_parser
+end
