@@ -49,10 +49,10 @@ def parse_time(str)
 end
 
 def start(options)
-  dim_duration = options[:dim_duration]
-  sleep_duration = options[:sleep_duration]
-  brightness = options[:brightness]
-  inactive = options[:inactive]
+  dim_duration = options[:dim_duration] || 30
+  sleep_duration = options[:sleep_duration] || 3600
+  brightness = options[:brightness] || 0.1
+  inactive = options[:inactive] || 15
   run_in_background = options[:run_in_background] || false
 
   if run_in_background
@@ -116,7 +116,7 @@ option_parser = OptionParser.new do |opts|
       puts 'Dim duration must be a positive integer not exceeding 300 (5 minutes)'
       exit
     end
-    options[:dim_duration] = d || 30
+    options[:dim_duration] = d
   end
 
   opts.on('-sSLEEP', '--sleep=SLEEP', 'Set sleep duration') do |s|
@@ -125,7 +125,7 @@ option_parser = OptionParser.new do |opts|
       puts 'Sleep duration must be a positive integer'
       exit
     end
-    options[:sleep_duration] = s || 3600
+    options[:sleep_duration] = s
   end
 
   opts.on('-bBRIGHTNESS', '--brightness=BRIGHTNESS', 'Set dimming brightness') do |b|
@@ -134,7 +134,7 @@ option_parser = OptionParser.new do |opts|
       puts 'Brightness must be a float between 0.0 and 1.0'
       exit
     end
-    options[:brightness] = b || 0.1
+    options[:brightness] = b
   end
 
   opts.on('-iINACTIVE', '--inactive=INACTIVE', 'Set the duration of inactivity before dimming') do |i|
@@ -143,7 +143,7 @@ option_parser = OptionParser.new do |opts|
       puts 'Inactive duration must be a positive integer'
       exit
     end
-    options[:inactive] = i || 30
+    options[:inactive] = i
   end
 
   opts.on('-r', '--run-in-background', 'Run in background') do
@@ -167,7 +167,7 @@ when 'stop'
   stop
 when 'now'
   stop
-  dim_screen(options[:dim_duration], options[:brightness])
+  dim_screen(options[:dim_duration] || 30, options[:brightness] || 0.1)
   start(options)
 else
   puts "Invalid command. Please use 'run' to start the script and 'stop' to stop it."
