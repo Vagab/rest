@@ -1,8 +1,15 @@
 #!/usr/bin/env ruby
-# frozen_string_literal: true
 
-require 'fileutils'
 require 'optparse'
+require 'socket'
+require 'fileutils'
+
+system('logger &')
+
+DUMMY_PATH = '/var/log/rest_dummy'
+PID_PATH = '/tmp/rest.pid'
+FileUtils.touch(DUMMY_PATH) unless File.exist?(DUMMY_PATH)
+FileUtils.touch(PID_PATH) unless File.exist?(PID_PATH)
 
 def get_brightness
   `brightness -l`.split.last.to_f
@@ -13,20 +20,24 @@ def set_brightness(value)
 end
 
 def dim_screen(dim_duration, brightness)
-  step = 0.05
-  ((get_brightness - brightness) / step).floor.to_i.times do
-    set_brightness(get_brightness - step)
-    sleep 0.001
+  initial_brightness = get_brightness
+  current_brightness = initial_brightness
+  step = 0.01
+  ((initial_brightness - brightness) / step).floor.to_i.times do
+    set_brightness(current_brightness -= step)
+    sleep step / 100
   end
+
   set_brightness(brightness)
 
   sleep(dim_duration)
 
-  ((1.0 - get_brightness) / step).floor.to_i.times do
-    set_brightness(get_brightness + step)
-    sleep 0.001
+  ((initial_brightness - brightness) / step).floor.to_i.times do
+    set_brightness(current_brightness += step)
+    sleep step / 100
   end
-  set_brightness(1.0)
+
+  set_brightness(initial_brightness)
 end
 
 def parse_time(str)
@@ -40,43 +51,53 @@ end
 def start(options)
   dim_duration = options[:dim_duration] || 10
   sleep_duration = options[:sleep_duration] || 3600
-  brightness = options[:brightness] || 0.5
+  brightness = options[:brightness] || 0.1
   run_in_background = options[:run_in_background] || false
 
   if run_in_background
     pid = fork do
+      sleep(sleep_duration)
       run_dimmer(dim_duration, sleep_duration, brightness)
     end
 
     if pid
       Process.detach(pid)
-      File.write('/tmp/rest.pid', pid)
+      File.write(PID_PATH, pid)
       puts "Dim screen script started in the background with pid #{pid}"
     else
       puts 'Failed to start dim screen script in the background'
     end
   else
+    sleep(sleep_duration)
     run_dimmer(dim_duration, sleep_duration, brightness)
   end
 end
 
 def run_dimmer(dim_duration, sleep_duration, brightness)
   Signal.trap('TERM') do
-    FileUtils.rm_f('/tmp/rest.pid')
+    FileUtils.rm_f(PID_PATH)
+    FileUtils.rm_f(DUMMY_PATH)
     exit
   end
 
   loop do
-    dim_screen(dim_duration, brightness)
-    sleep(sleep_duration)
+    last_modified = File.mtime(DUMMY_PATH)
+
+    if Time.now - last_modified > 300
+      dim_screen(dim_duration, brightness)
+      sleep(sleep_duration)
+    else
+      sleep(1)
+    end
   end
 end
 
 def stop
-  if File.exist?('/tmp/rest.pid')
-    pid = File.read('/tmp/rest.pid').to_i
+  if File.exist?(PID_PATH)
+    pid = File.read(PID_PATH).to_i
     Process.kill('TERM', pid)
-    FileUtils.rm_f('/tmp/rest.pid')
+    FileUtils.rm_f(PID_PATH)
+    FileUtils.rm_f(DUMMY_PATH)
     puts 'Dim screen script stopped.'
   else
     puts 'Dim screen script is not running.'
