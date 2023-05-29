@@ -52,12 +52,13 @@ def start(options)
   dim_duration = options[:dim_duration] || 10
   sleep_duration = options[:sleep_duration] || 3600
   brightness = options[:brightness] || 0.1
+  inactive = options[:inactive] || 30
   run_in_background = options[:run_in_background] || false
 
   if run_in_background
     pid = fork do
       sleep(sleep_duration)
-      run_dimmer(dim_duration, sleep_duration, brightness)
+      run_dimmer(dim_duration, sleep_duration, brightness, inactive)
     end
 
     if pid
@@ -69,11 +70,11 @@ def start(options)
     end
   else
     sleep(sleep_duration)
-    run_dimmer(dim_duration, sleep_duration, brightness)
+    run_dimmer(dim_duration, sleep_duration, brightness, inactive)
   end
 end
 
-def run_dimmer(dim_duration, sleep_duration, brightness)
+def run_dimmer(dim_duration, sleep_duration, brightness, inactive)
   Signal.trap('TERM') do
     FileUtils.rm_f(PID_PATH)
     FileUtils.rm_f(DUMMY_PATH)
@@ -83,7 +84,7 @@ def run_dimmer(dim_duration, sleep_duration, brightness)
   loop do
     last_modified = File.mtime(DUMMY_PATH)
 
-    if Time.now - last_modified > 300
+    if Time.now - last_modified > inactive
       dim_screen(dim_duration, brightness)
       sleep(sleep_duration)
     else
@@ -134,6 +135,15 @@ option_parser = OptionParser.new do |opts|
       exit
     end
     options[:brightness] = b
+  end
+
+  opts.on('-iINACTIVE', '--inactive=INACTIVE', 'Set the duration of inactivity before dimming') do |i|
+    i = parse_time(i)
+    if i <= 0
+      puts 'Inactive duration must be a positive integer'
+      exit
+    end
+    options[:inactive] = i
   end
 
   opts.on('-r', '--run-in-background', 'Run in background') do
