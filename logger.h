@@ -12,7 +12,7 @@
 #include <Carbon/Carbon.h>
 // https://developer.apple.com/library/mac/documentation/Carbon/Reference/QuartzEventServicesRef/Reference/reference.html
 
-const char *logfileLocation = "/var/log/rest_dummy";
+const char *logfileLocation = "/tmp/rest_dummy";
 
 CGEventRef CGEventCallback(CGEventTapProxy, CGEventType, CGEventRef, void*);
 const char *convertKeyCode(int, bool, bool);

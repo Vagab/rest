@@ -6,7 +6,7 @@ require 'fileutils'
 
 system('logger &')
 
-DUMMY_PATH = '/var/log/rest_dummy'
+DUMMY_PATH = '/tmp/rest_dummy'
 PID_PATH = '/tmp/rest.pid'
 FileUtils.touch(DUMMY_PATH) unless File.exist?(DUMMY_PATH)
 FileUtils.touch(PID_PATH) unless File.exist?(PID_PATH)
