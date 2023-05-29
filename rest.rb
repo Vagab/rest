@@ -165,6 +165,10 @@ when 'run'
   start(options)
 when 'stop'
   stop
+when 'now'
+  stop
+  dim_screen(options[:dim_duration], options[:brightness])
+  start(options)
 else
   puts "Invalid command. Please use 'run' to start the script and 'stop' to stop it."
   puts option_parser
