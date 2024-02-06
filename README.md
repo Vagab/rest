@@ -5,7 +5,7 @@ farm to cultivate I decided that I better have a `rest` sometimes.
 And thus this was hallucinated into being.
 
 This package periodically dims your screen for some time so as to forcefully remind the user to have a rest,
-unless you were right in the middle of something of course.
+*unless you were right in the middle of something of course*.
 
 # Installation
 Only works on macs and can break in a multitude of ways, but in general:
