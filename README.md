@@ -35,6 +35,6 @@ rest stop
 As you might have noticed, I intentionally mantioned
 > unless you were right in the middle of something
 
-That is because this sOfTwaRe(really?..) listens to your keystrokes and your mouse moves to determine if it should dim the screen.
+That is because the `rest` listens to your keystrokes and your mouse moves to determine if it should dim the screen.
 Not to worry, it doesn't record anything except the fact that _something_ has happened, not the **what** and only the last
 occurence(so not really a **when** either). In any case you can just look through the uglyness which is the source code to ease your mind.
